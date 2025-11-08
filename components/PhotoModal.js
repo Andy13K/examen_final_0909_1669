@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import {
   Modal,
   View,
@@ -6,61 +6,16 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
-  Animated,
   Linking,
   Dimensions,
   ScrollView,
   StatusBar,
+  Platform,
 } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
 export default function PhotoModal({ photo, visible, onClose }) {
-  const slideAnim = useRef(new Animated.Value(height)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          friction: 9,
-          tension: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: height,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.8,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
-
   if (!photo) return null;
 
   const openInUnsplash = () => {
@@ -70,45 +25,38 @@ export default function PhotoModal({ photo, visible, onClose }) {
   return (
     <Modal
       visible={visible}
-      transparent
-      animationType="none"
+      transparent={true}
+      animationType="slide"
       onRequestClose={onClose}
-      statusBarTranslucent
+      hardwareAccelerated={true}
     >
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
-      {/* Backdrop oscuro */}
-      <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
+      <View style={styles.modalOverlay}>
+        {/* Fondo para cerrar */}
+        <TouchableOpacity 
+          style={styles.backdropButton}
           activeOpacity={1}
           onPress={onClose}
         />
-      </Animated.View>
 
-      {/* Contenedor del modal */}
-      <Animated.View
-        style={[
-          styles.modalContainer,
-          {
-            transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
-          },
-        ]}
-      >
+        {/* Contenido del modal */}
         <View style={styles.modalContent}>
           {/* Header con botón cerrar */}
           <View style={styles.header}>
-            <View style={styles.headerGradient}>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Detalles de la Foto</Text>
-            </View>
+            <TouchableOpacity 
+              onPress={onClose} 
+              style={styles.closeButton}
+              hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Detalles de la Foto</Text>
+            <View style={styles.placeholder} />
           </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
+            bounces={true}
           >
             {/* Imagen principal */}
             <View style={styles.imageContainer}>
@@ -117,7 +65,7 @@ export default function PhotoModal({ photo, visible, onClose }) {
                 style={styles.image}
                 resizeMode="cover"
               />
-              <View style={styles.imageGradient} />
+              <View style={styles.imageOverlay} />
             </View>
 
             {/* Información de la foto */}
@@ -189,80 +137,84 @@ export default function PhotoModal({ photo, visible, onClose }) {
                 activeOpacity={0.8}
                 style={styles.unsplashButton}
               >
-                <View style={styles.unsplashGradient}>
-                  <Text style={styles.unsplashIcon}>🔗</Text>
-                  <Text style={styles.unsplashButtonText}>
-                    Ver en Unsplash
-                  </Text>
-                </View>
+                <Text style={styles.unsplashIcon}>🔗</Text>
+                <Text style={styles.unsplashButtonText}>
+                  Ver en Unsplash
+                </Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
-      </Animated.View>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-  },
-  modalContainer: {
+  modalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: StatusBar.currentHeight + 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'flex-end',
+  },
+  backdropButton: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
   },
   modalContent: {
-    width: '100%',
-    maxHeight: height * 0.9,
-    borderRadius: 30,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(15, 15, 30, 0.98)',
+    backgroundColor: '#0f0f1e',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    maxHeight: height * 0.92,
     shadowColor: '#667eea',
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: -5,
     },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
     elevation: 20,
+    zIndex: 2,
   },
   header: {
-    overflow: 'hidden',
-  },
-  headerGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    justifyContent: 'space-between',
+    paddingVertical: 20,
     paddingHorizontal: 20,
     backgroundColor: '#667eea',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   closeButtonText: {
     color: '#fff',
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
+    lineHeight: Platform.OS === 'ios' ? 24 : 28,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
     flex: 1,
+    textAlign: 'center',
+  },
+  placeholder: {
+    width: 40,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 30,
   },
   imageContainer: {
     width: '100%',
@@ -274,7 +226,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  imageGradient: {
+  imageOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
@@ -352,18 +304,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   unsplashButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginTop: 8,
-  },
-  unsplashGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#667eea',
+    borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 24,
+    marginTop: 8,
     gap: 8,
-    backgroundColor: '#667eea',
   },
   unsplashIcon: {
     fontSize: 18,
