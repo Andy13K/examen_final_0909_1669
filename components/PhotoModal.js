@@ -144,6 +144,21 @@ export default function PhotoModal({ photo, visible, onClose }) {
               </TouchableOpacity>
             </View>
           </ScrollView>
+
+          {/* Footer con información del estudiante */}
+          <View style={styles.footer}>
+            <View style={styles.footerContent}>
+              <View style={styles.footerLeft}>
+                <Text style={styles.footerName}>👨‍💻 Andy Aquino</Text>
+                <Text style={styles.footerId}>📋 0909-22-1669</Text>
+              </View>
+              <View style={styles.footerDivider} />
+              <View style={styles.footerRight}>
+                <Text style={styles.footerExam}>📝 Examen Final</Text>
+                <Text style={styles.footerSubject}>💻 Desarrollo Web</Text>
+              </View>
+            </View>
+          </View>
         </View>
       </View>
     </Modal>
@@ -214,7 +229,7 @@ const styles = StyleSheet.create({
     width: 40,
   },
   scrollContent: {
-    paddingBottom: 30,
+    paddingBottom: 20,
   },
   imageContainer: {
     width: '100%',
@@ -322,5 +337,61 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  // Footer con información del estudiante
+  footer: {
+    backgroundColor: '#1a1a2e',
+    borderTopWidth: 2,
+    borderTopColor: '#667eea',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    shadowColor: '#667eea',
+    shadowOffset: {
+      width: 0,
+      height: -4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  footerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  footerLeft: {
+    flex: 1,
+  },
+  footerName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 3,
+  },
+  footerId: {
+    fontSize: 12,
+    color: '#667eea',
+    fontWeight: '600',
+  },
+  footerDivider: {
+    width: 2,
+    height: 40,
+    backgroundColor: '#667eea',
+    marginHorizontal: 16,
+  },
+  footerRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  footerExam: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 3,
+  },
+  footerSubject: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
   },
 });
