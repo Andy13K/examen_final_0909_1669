@@ -1,23 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
 import {
   StyleSheet,
-  Text,
   View,
   FlatList,
-  ActivityIndicator,
-  SafeAreaView,
   RefreshControl,
+  StatusBar,
+  Text,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import PhotoCard from './components/PhotoCard';
 import PhotoModal from './components/PhotoModal';
 
+const { width } = Dimensions.get('window');
+
 export default function App() {
   const [photos, setPhotos] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const fadeAnim = new Animated.Value(0);
+  const slideAnim = new Animated.Value(-50);
+
+  useEffect(() => {
+    fetchPhotos();
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [loading]);
 
   const fetchPhotos = async () => {
     try {
@@ -29,107 +53,155 @@ export default function App() {
       console.error('Error fetching photos:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const onRefresh = async () => {
+  const onRefresh = () => {
     setRefreshing(true);
-    await fetchPhotos();
-    setRefreshing(false);
-  };
-
-  useEffect(() => {
     fetchPhotos();
-  }, []);
-
-  const handlePhotoPress = (photo) => {
-    setSelectedPhoto(photo);
-    setModalVisible(true);
   };
 
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setSelectedPhoto(null);
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
-        <Text style={styles.loadingText}>Cargando galería...</Text>
+  const renderHeader = () => (
+    <Animated.View
+      style={[
+        styles.headerContainer,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        },
+      ]}
+    >
+      <View style={styles.headerGradient}>
+        <Text style={styles.headerTitle}>📸 Galería de Fotos</Text>
+        <Text style={styles.headerSubtitle}>
+          Explora {photos.length} fotos increíbles
+        </Text>
       </View>
-    );
-  }
+    </Animated.View>
+  );
+
+  const renderSkeleton = () => (
+    <View style={styles.skeletonContainer}>
+      {[...Array(6)].map((_, index) => (
+        <View key={index} style={styles.skeletonCard}>
+          <Animated.View
+            style={[
+              styles.skeletonShimmer,
+              {
+                opacity: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.3, 0.7],
+                }),
+              },
+            ]}
+          />
+        </View>
+      ))}
+    </View>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
       
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>📸 Galería de Fotos</Text>
-        <Text style={styles.headerSubtitle}>{photos.length} fotos disponibles</Text>
-      </View>
+      {renderHeader()}
 
-      <FlatList
-        data={photos}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        contentContainerStyle={styles.listContent}
-        columnWrapperStyle={styles.row}
-        renderItem={({ item }) => (
-          <PhotoCard photo={item} onPress={handlePhotoPress} />
-        )}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#4CAF50']} />
-        }
-      />
+      {loading && renderSkeleton()}
+
+      {!loading && (
+        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+          <FlatList
+            data={photos}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item, index }) => (
+              <PhotoCard
+                photo={item}
+                onPress={() => setSelectedPhoto(item)}
+                index={index}
+              />
+            )}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#667eea"
+                colors={['#667eea', '#764ba2', '#f093fb']}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+          />
+        </Animated.View>
+      )}
 
       <PhotoModal
-        visible={modalVisible}
         photo={selectedPhoto}
-        onClose={handleCloseModal}
+        visible={!!selectedPhoto}
+        onClose={() => setSelectedPhoto(null)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#0f0f1e',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+  headerContainer: {
+    marginBottom: 8,
   },
-  loadingText: {
-    marginTop: 16,
-    color: '#fff',
-    fontSize: 16,
-  },
-  header: {
-    backgroundColor: '#2d2d2d',
-    padding: 20,
-    paddingTop: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+  headerGradient: {
+    paddingTop: StatusBar.currentHeight + 20,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    backgroundColor: '#667eea',
+    shadowColor: '#667eea',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 12,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 4,
+    letterSpacing: 0.5,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#aaa',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
   },
   listContent: {
-    padding: 16,
+    paddingHorizontal: 8,
+    paddingBottom: 20,
   },
-  row: {
-    justifyContent: 'space-between',
+  skeletonContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 8,
+    paddingTop: 8,
+  },
+  skeletonCard: {
+    width: (width - 24) / 2,
+    height: 220,
+    margin: 4,
+    borderRadius: 20,
+    backgroundColor: '#1a1a2e',
+    overflow: 'hidden',
+  },
+  skeletonShimmer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#2a2a3e',
   },
 });
